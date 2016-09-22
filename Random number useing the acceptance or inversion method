@@ -1,0 +1,92 @@
+#include <iostream>
+#include <fstream>
+#include <math.h>
+#include <iomanip>
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+
+#include "TROOT.h"
+#include "TTree.h"	// we will use a tree to store our values
+#include "TApplication.h"
+#include "TFile.h"
+#include "TF1.h"
+
+
+int rand(void);
+void srand(unsigned int);
+
+void main(int argc, char **argv)
+{
+	double x_low=0.; // lower limit of our distribution
+	double x_high=180.; // the upper limit
+	double deg_rad=3.14159265/180.; //converts degrees in rads
+	
+	
+	//structure for our distribution variables
+	struct dist_t { double x_throw;  // the thrown value 
+			double x_acc; // the accepted value
+			double y_throw; 
+			double y_acc;
+		       };
+	 dist_t dist;
+		
+	 int i_loop;	//inner loop
+	
+	 
+	  unsigned int seed = 68910 ; // here is the starting value or seed
+
+	   int loop_max=1000000; // the maximum number of steps	
+
+	  double rnd;
+
+
+ 	TROOT root("hello","computational physics");
+	
+	// initialize root
+	   TApplication theApp("App", &argc, argv);
+
+
+	//open output file
+	TFile *out_file = new TFile("rnd_acc.root","RECREATE","A distribution
+	following a sine"); // create root file
+	
+	// Declare tree
+	TTree *dist_tree = new TTree("dist_tree","tree with rejection");
+	 
+	 dist_tree->Branch("dist",&dist.x_throw, "x_throw/D:x_acc/D:y_throw/D:y_acc");
+
+	// set seed value
+	srand(seed);
+
+	
+	 for(i_loop=0;i_loop < loop_max ;i_loop= i_loop+1)
+	 {
+	
+	// step 1: throw x between 0 and 180 
+	dist.x_throw=x_low+double(rand())/double(RAND_MAX)*
+	  (x_high-x_low)*deg_rad; 
+	
+	// step 2: create a random variable in y between 0 and 1  
+	  	dist.y_throw=1.*double(rand())/double(RAND_MAX); // from 0,1
+	
+	// step 3: Check if f(x)>y and if true accept
+		if(sin(dist.x_throw)>dist.y_throw)
+		  {
+		    dist.x_acc=dist.x_throw/deg_rad;
+		     dist.y_acc=dist.y_throw;
+		     }
+
+		 else
+	// these are the rejected ones.
+		  {
+		  dist.x_acc=-999;
+		  dist.y_acc=-999;
+		  }
+	       dist_tree->Fill();
+	    
+	  }
+	 
+	out_file->Write();
+
+}
