@@ -1,0 +1,115 @@
+#include <iostream>
+#include <fstream>
+#include <math.h>
+#include <iomanip>
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+
+#include "TROOT.h"
+#include "TTree.h"	// we will use a tree to store our values
+#include "TApplication.h"
+#include "TFile.h"
+#include "TF1.h"
+
+inline double uq(double x) // the u quark structure function 
+	{
+	   return(2.13*sqrt(x)*pow((1-x),2.8));
+	}
+inline double dq(double x) // the d quark structure function
+	{
+	   return(1.26*sqrt(x)*pow((1-x),3.8));
+	}
+inline double sea(double x) // the sea quark structure function
+	{
+	   return(.27*pow((1-x),8.1));
+	}
+
+int rand(void);
+void srand(unsigned int);
+
+int main(int argc, char **argv)
+{
+	
+	
+	//structure for our  variables
+	struct dist_t { double x1 ;  // the momentum fraction of the 1st quark
+			double x2 ; // the momentum fraction of the 2nd quark
+			double dsig; // the cross section
+			double M2; // the invariant mass  of the dileptons
+			double xf; // Feynman x x1-x2
+	 		double quark1;
+	 		double quark2;
+			double dsigfey;
+		       };
+	 dist_t dist;
+	 double DYcon= 5.32793436e-5; // the QED constant alpha squared	
+	 double ebeam=25.; // the beam energy
+	 double pi = 3.141592654;
+	 double etot2=4*ebeam*ebeam; // the total energy squared
+	 double xA; // the first thrown x
+	 double yA; // the comparison function for xA
+	 double xB; // the second thrown x
+	 double yB; // the comparison function for xB
+	 int i_loop;	//inner loop
+	 double mass2;
+	 double quark1;
+	 double quark2;
+	
+	 
+	  unsigned int seed = 68910 ; // here is the starting value or seed
+
+	   int loop_max=5000000; // the maximum number of steps	
+
+	  double rnd;
+
+
+ 	TROOT root("hello","computational physics");
+	
+	// initialize root
+	   TApplication theApp("App", &argc, argv);
+
+
+	//open output file
+	TFile *out_file = new TFile("DY1.root","RECREATE","The Drell Yan cross section"); // create root file
+	
+	// Declare tree
+	TTree *dist_tree = new TTree("dist_tree","tree for Drell Yan");
+	 
+	 dist_tree->Branch("dist",&dist.x1,
+	 "x1/D:x2/D:dsig/D:M2/D:xf/D:quark1/D:quark2/D:dsigfey/D");
+
+	// set seed value
+	srand(seed);
+
+	
+	 for(i_loop=0;i_loop < loop_max ;i_loop= i_loop+1)
+	 {
+	
+	// step 1: throw x1 between 0 and 1 
+	xA=double(rand())/double(RAND_MAX);
+	xB=double(rand())/double(RAND_MAX);
+	 yA=double(rand())/double(RAND_MAX);
+	 
+	 mass2=etot2*xA*xB;
+
+	
+	// step 3: Check if f(x)>y and if true accept
+		if((uq(xA)>yA)&&(dq(xA)>yA)&&(sea(xB)>yA)
+		&&(uq(xB)>yA)&&(dq(xB)>yA)&&(sea(xA)>yA)
+		&&(mass2>25.)&&mass2<144.)
+		  {
+		    dist.x1=xA;
+		     dist.x2=xB;
+		       dist.M2=sqrt(mass2);  //The invariant mass
+		        dist.quark1=8./9.*(uq(xA)*sea(xB)+sea(xA)*uq(xB));
+			 dist.quark2=1./9.*(dq(xA)*sea(xB)+sea(xA)*dq(xB));
+		        dist.dsig=DYcon*4*pi/9/mass2*(dist.quark1+dist.quark2); //The cross section
+			dist.dsigfey=dist.dsig/(xA+xB);
+		         dist.xf=xA-xB; // The Feyman X
+	                  dist_tree->Fill();
+ 		     }
+
+	 }
+	out_file->Write();
+}
