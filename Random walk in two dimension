@@ -1,0 +1,98 @@
+#include <iostream>
+#include <fstream>
+#include <math.h>
+#include <iomanip>
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+
+#include "TROOT.h"
+#include "TTree.h"	// we will use a tree to store our values
+#include "TApplication.h"
+#include "TFile.h"
+
+
+int rand(void);
+void srand(unsigned int);
+
+void main(int argc, char **argv)
+{
+
+	//structure for our random walk variables
+	struct walk_t { double x;  // the position after a step
+			double y; //
+			int nstep; // the step number
+			int jloop; // number of outer loops
+		       };
+	 walk_t walk;
+		
+	 int i_loop;	//inner loop
+	 int j_loop;	//outer loop
+	 int jloop_max=5000; // the max number of different trials
+	
+	 
+	  unsigned int seed = 557 ; // here is the starting value or seed
+
+	   int loop_max=100; // the maximum number of steps	
+
+	  double rnd1;
+	  double rnd2;
+	  double y_temp; // temporary variable for y
+
+
+ 	TROOT root("hello","computational physics");
+	
+	// initialize root
+	   TApplication theApp("App", &argc, argv);
+
+
+	//open output file
+	TFile *out_file = new TFile("rnd_walk557_2.root","RECREATE","example of
+	random random walk"); // create root file
+	
+	// Declare tree
+	TTree *ran_walk = new TTree("ran_walk","tree with random walk variables");
+	 
+	 ran_walk->Branch("walk",&walk.x, "x/D:y/D:nstep/I:jloop/I");
+
+	// set seed value
+	srand(seed);
+	
+	// the outer loop, trying the walk jloop times
+	for(j_loop=0;j_loop < jloop_max ;j_loop= j_loop+1)
+        {
+		walk.x=0.;
+		walk.y=0.;
+		walk.nstep=0;
+		walk.jloop=j_loop+1;
+
+	
+	 for(i_loop=0;i_loop < loop_max ;i_loop= i_loop+1)
+	 {
+	  // here we get the step
+	 	rnd1=double(rand())/double(RAND_MAX);
+		 rnd1=2*rnd1-1.;
+	          walk.x=walk.x+rnd1;
+		
+		   if(rnd1*rnd1>1.) rnd1=1.; //safety for square root.
+		   y_temp=sqrt(1.-rnd1*rnd1);
+		
+	 	rnd2=double(rand())/double(RAND_MAX);
+ 	  	 if((rnd2-.5)<=0.)
+		  {
+		    walk.y=walk.y-y_temp;
+		  }
+		  else 
+		  {
+		    walk.y=walk.y+y_temp;
+		   }
+	     
+	     walk.nstep=walk.nstep+1;
+	     // fill the tree
+	       ran_walk->Fill();
+	    
+	  }
+	 }
+	out_file->Write();
+
+}
